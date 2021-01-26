@@ -1,6 +1,6 @@
 import requests
 
-from settings import token
+from settings import token  # Токен бота
 
 URL = 'https://api.telegram.org/bot' + token + '/'
 
