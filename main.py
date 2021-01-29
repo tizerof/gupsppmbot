@@ -139,11 +139,13 @@ def group_messages(r):
         if 'Номер заявки:' in message_text:
             db = DB()
             message_lines = message_text.split('\n')
-            district = message_lines[6][7:]
-            type_request = message_lines[9][12:]
             address = message_lines[4][15:]
+            district = message_lines[6][7:]
+            text = message_lines[7][13:]
+            type_request = message_lines[9][12:]
+            message = f'{address}\n + {type_request}\n {text}'
             for chat_id in db.get_users_with_district(district):
-                send_message(chat_id[0], address + '\n' + type_request)
+                send_message(chat_id[0], message)
     return Response('Ok', status=200)
 
 
