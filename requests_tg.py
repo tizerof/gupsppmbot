@@ -7,15 +7,14 @@ URL = 'https://api.telegram.org/bot' + token + '/'
 
 def send_message(chat_id, text, reply_markup=''):
     url = URL + 'sendMessage'
-    answer = {'chat_id': chat_id, 'text': text, 'reply_markup': reply_markup}
-    r = requests.post(url, json=answer)
+    context = {'chat_id': chat_id, 'text': text, 'reply_markup': reply_markup}
+    r = requests.post(url, json=context)
     return r
 
 
 def deleteMessageReplyMarkup(chat_id, message_id):
     url = URL + 'editMessageReplyMarkup'
-    answer = {'chat_id': chat_id,
-              'message_id': message_id, 'reply_markup': [[]]}
+    answer = {'chat_id': chat_id, 'message_id': message_id}
     r = requests.post(url, json=answer)
     return r
 

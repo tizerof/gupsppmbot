@@ -2,7 +2,7 @@ import sqlite3
 import json
 from flask import Flask, Response, request
 
-from requests_tg import *
+from requests_tg import send_message, deleteMessageReplyMarkup
 
 app = Flask(__name__)
 
@@ -18,20 +18,13 @@ def get_inline_keyboard():
     return {'inline_keyboard': keyboard}
 
 
-def check_name(r, name):
-    if name in r['message']['chat'][name]:
-        return name
-    else:
-        return ''
-
-
 class DB():
     """ Класс для запросов в бд """
 
     def __init__(self):
         self.conn = sqlite3.connect('contacts.db')
         self.cur = self.conn.cursor()
-        self.cur.execute("""CREATE TABLE IF NOT EXIST main(
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS main(
             district TEXT,
             username TEXT,
             chat_id INTEGER,
@@ -39,9 +32,11 @@ class DB():
         """)
 
     def __del__(self):
+        self.conn.commit()
         self.conn.close()
 
-    def insert_new_district_with_user(self, district, username, chat_id, name):
+    def insert_new_record(self, district, username, chat_id, name):
+        """ Добавить новую запись в таблицу main """
         conn = sqlite3.connect('contacts.db')
         cur = self.conn.cursor()
         cur.execute(
@@ -50,19 +45,28 @@ class DB():
         conn.close()
 
     def update_district(self, district, chat_id):
+        """ Заполнить пустой район у юзера в таблице main"""
         self.cur.execute(
             """UPDATE main SET district= ? WHERE district= ? AND chat_id= ?""",
             [district, '', chat_id])
 
     def get_districts_of_user(self, chat_id):
-        """ Выбираем районы пользователя из БД """
-        districts = ''.join(self.cur.execute(
-            """SELECT district FROM main WHERE chat_id LIKE(?)""", (chat_id,)))
-        return districts
+        """ Выбираем районы пользователя """
+        district = ''
+        for dis in self.cur.execute(
+                "SELECT district FROM main WHERE chat_id LIKE ?", [chat_id]):
+            district += f'{dis[0]} '
+        return district
+
+    def get_users_with_district(self, district):
+        """ Выбираем пользователей с данным районом """
+        users = self.cur.execute("""SELECT chat_id
+                    FROM main WHERE district LIKE ?""", [district]).fetchall()
+        return users
 
 
 def command_start(chat_id, username, full_name):
-    """Команда / start """
+    """Команда /start """
     db = DB()
     dis = db.get_districts_of_user(chat_id)
     if dis == '':
@@ -70,7 +74,7 @@ def command_start(chat_id, username, full_name):
             chat_id,
             'Введите один район. Важно указать название района так же,'
             ' как пишет Диспетчерская:', {'force_reply': True})
-        db.insert_new_district_with_user('', username, chat_id, full_name)
+        db.insert_new_record('', username, chat_id, full_name)
         send_message(
             '286032878', 'Новый пользователь: @' + username + ' ' + full_name)
     else:
@@ -81,53 +85,65 @@ def command_start(chat_id, username, full_name):
 
 def callback_query(r):
     """ Ответ на callback query клавиатуры """
-    conn = sqlite3.connect('contacts.db')
-    cur = conn.cursor()
+    db = DB()
+    chat_id = r['callback_query']['message']['chat']['id']
+    deleteMessageReplyMarkup(
+        chat_id,
+        r['callback_query']['message']['message_id'])
     if r['callback_query']['data'] == 'add':
-        username = check_name(r['callback_query'], 'username')
-        first_name = check_name(r['callback_query'], 'first_name')
-        last_name = check_name(r['callback_query'], 'last_name')
-        insert_new_district_with_user_in_db(
-            '', username, r['message']['chat']['id'],
-            first_name + ' ' + last_name)
-        deleteMessageReplyMarkup(r['callback_query']['message']['chat']['id'],
-                                 r['callback_query']['message']['message_id'])
-        send_message(r['callback_query']['message']['chat']['id'],
-                     'Пришлите один район. Важно указать название '
-                     'района так же, как пишет Диспетчерская!',
-                     {'force_reply': True})
+        username = r['callback_query'].get('username')
+        first_name = r['callback_query'].get('first_name')
+        last_name = r['callback_query'].get('last_name')
+        full_name = ''
+        if first_name:
+            full_name += f'{first_name} '
+        if last_name:
+            full_name += f'{last_name} '
+        db.insert_new_record(
+            '', username, chat_id, full_name)
+        send_message(
+            chat_id,
+            'Введите один район. Важно указать название района так же,'
+            ' как пишет Диспетчерская:', {'force_reply': True})
     elif r['callback_query']['data'] == 'ok':
-        dis = ''
-        for title in cur.execute('SELECT district FROM main WHERE chat_id LIKE ?',
-                                 [r['callback_query']['message']['chat']['id']]):
-            dis += title[0] + ' '
-        deleteMessageReplyMarkup(r['callback_query']['message']['chat']['id'],
-                                 r['callback_query']['message']['message_id'])
-        send_message(r['callback_query']['message']
-                     ['chat']['id'], 'Ваши районы: ' + dis)
-        send_message(r['callback_query']['message']['chat']['id'], 'Бот будет присылать вам '
-                     'сообщения с заявками ваших районов. Можно выключить звук чата с '
-                     'Диспетчером.\nДля добавления районов запустите'
-                     ' бота заного, командой /start\nПо вопросам пишите @tizerof')
-    else:
-        return Response('Ok', status=200)
-    conn.commit()
-    conn.close()
+        dis = db.get_districts_of_user(chat_id)
+        send_message(chat_id, 'Ваши районы: ' + dis)
+        send_message(
+            chat_id,
+            'Бот будет присылать вам сообщения с заявками ваших районов. '
+            'Можно выключить звук чата с Диспетчером.\n'
+            'Для добавления районов запустите бота заново, командой /start\n'
+            'По вопросам пишите @tizerof')
     return Response('Ok', status=200)
 
 
 def req_text(r):
     """ Ответы на текст """
-    db = DB()
     # Добавление района пользователю
-    if r['message'].get('reply_to_message')['data'] == 'ok':
+    if r['message'].get('reply_to_message').get('text')[:7] == 'Введите':
+        db = DB()
         district = r['message']['text']
         chat_id = r['message']['chat']['id']
-        db.update_district(district=district, chat_id=chat_id)
+        db.update_district(district, chat_id)
         send_message(
             chat_id, f'Район {district} добавлен.', get_inline_keyboard())
-        print('Новый район у', r['message']
-              ['chat']['id'], r['message']['text'])
+        print('Новый район у', chat_id, district)
+    return Response('Ok', status=200)
+
+
+def group_messages(r):
+    """ Обработка групповых сообщений """
+    # Пересылка заявок пользователям
+    if 'text' in r['message']:
+        message_text = r['message']['text']
+        if 'Номер заявки:' in message_text:
+            db = DB()
+            message_lines = message_text.split('\n')
+            district = message_lines[6][7:]
+            type_request = message_lines[9][12:]
+            address = message_lines[4][15:]
+            for chat_id in db.get_users_with_district(district):
+                send_message(chat_id[0], address + '\n' + type_request)
     return Response('Ok', status=200)
 
 
@@ -137,42 +153,29 @@ def index():
         r = request.get_json()
         write_json(r)
         try:
-            chat_id = r['message']['chat']['id']
-            username = r['message']["chat"]["username"]
-            full_name = r['message']["chat"].get(
-                "first_name") + ' ' + r['message']["chat"].get('last_name')
             if r.get('callback_query'):
                 return callback_query(r)
-            elif r['message']['chat']['type'] == 'private':
+            chat = r.get('message').get('chat')
+            chat_id = chat.get('id')
+            username = chat.get('username')
+            first_name = chat.get('first_name')
+            last_name = chat.get('last_name')
+            full_name = ''
+            if first_name:
+                full_name += f'{first_name} '
+            if last_name:
+                full_name += f'{last_name} '
+            chat_type = chat.get('type')
+            if chat_type == 'private':
                 if r['message']['text'] == '/start':
-                    command_start(chat_id, username, full_name)
+                    return command_start(chat_id, username, full_name)
                 else:
-                    req_text(r)
-            # Пересылка заявок пользователям
-            elif (r['message']['chat']['type'] == 'group' or
-                  r['message']['chat']['type'] == 'supergroup'):
-                if ('reply_to_message' in r['message'] or
-                        'forward_from' in r['message']):
-                    return Response('Ok', status=200)
-                else:
-                    if 'text' in r['message']:
-                        r_text = r['message']['text']
-                        if 'Номер заявки:' in r_text:
-                            district = r_text.split('\n')[6][7:]
-                            type_request = r_text.split('\n')[9][12:]
-                            adress = r_text.split('\n')[4][15:]
-                            conn = sqlite3.connect('contacts.db')
-                            cur = conn.cursor()
-                            for title in cur.execute("""SELECT chat_id
-                            FROM main WHERE district LIKE ?""", [district]):
-                                send_message(
-                                    title[0], adress + '\n' + type_request)
-                            conn.commit()
-                            conn.close()
-            else:
-                return Response('Ok', status=200)
+                    return req_text(r)
+            elif chat_type == 'group' or 'supergroup':
+                return group_messages(r)
         except KeyError:
-            return Response('Ok', status=200)
+            print('KeyError')
+            pass
         return Response('Ok', status=200)
     else:
         return '<h1>Бот для ГУП СППМ (ВАО)</h1>'
