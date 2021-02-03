@@ -1,8 +1,9 @@
-import sqlite3
 import json
+import sqlite3
+
 from flask import Flask, Response, request
 
-from requests_tg import send_message, deleteMessageReplyMarkup
+from requests_tg import deleteMessageReplyMarkup, send_message
 
 app = Flask(__name__)
 
@@ -175,9 +176,8 @@ def index():
                     return req_text(r)
             elif chat_type == 'group' or 'supergroup':
                 return group_messages(r)
-        except KeyError:
-            print('KeyError')
-            pass
+        except Exception as e:
+            print(e)
         return Response('Ok', status=200)
     else:
         return '<h1>Бот для ГУП СППМ (ВАО)</h1>'
