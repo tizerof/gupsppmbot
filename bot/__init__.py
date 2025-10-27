@@ -1,4 +1,4 @@
-from telegram import BotCommand
+from telegram import BotCommand, BotCommandScopeAllPrivateChats
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -33,10 +33,13 @@ async def register_handlers(application: Application):
     ]
 
     for command, _, callback in commands:
-        application.add_handler(CommandHandler(command, callback))
+        application.add_handler(
+            CommandHandler(command, callback, filters=filters.ChatType.PRIVATE)
+        )
 
     await application.bot.set_my_commands(
-        [BotCommand(command, description) for command, description, _ in commands]
+        [BotCommand(command, description) for command, description, _ in commands],
+        scope=BotCommandScopeAllPrivateChats(),
     )
 
     # Скрытая команда для админа
