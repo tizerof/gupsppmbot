@@ -23,7 +23,7 @@ async def forward_message_to_districts(
     Только для групповых чатов
     """
     message = update.message
-    if message.chat and message.chat.type not in ["group", "supergroup"]:
+    if not message or message.chat and message.chat.type not in ["group", "supergroup"]:
         return
 
     district_name = None

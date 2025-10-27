@@ -6,5 +6,6 @@ greenlet==3.2.4
 psycopg2-binary==2.9.11
 pydantic-settings==2.11.0
 pydantic==2.12.3
+python-dotenv==1.0.1
 python-telegram-bot==22.5
 uvicorn==0.38.0

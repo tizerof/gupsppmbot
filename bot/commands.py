@@ -14,26 +14,30 @@ from database.crud import (
 )
 from settings import settings
 
-logger = logging.getLogger('uvicorn.error')
+logger = logging.getLogger("uvicorn.error")
+
+
+WELCOME_TEXT = """Добро пожаловать в Бот-Фильтр заявок АСУМО!
+Я помогу вам отслеживать заявки по своим районам.
+
+⚠️ Бот работает на бесплатном хостинге, может долго отвечать, до 5 минут.
+ 
+Для работы с ботом запросите активацию:
+/request_activation - запросить активацию аккаунта
+
+Доступные команды:
+/add_district <название> - подписаться на район
+/remove_district <название> - отписаться от района
+/my_districts - показать ваши районы
+/help - показать это сообщение
+
+Добавьте меня в групповой чат. 
+Когда там появляется заявка, я определю район из текста сообщения и перешлю её всем пользователям, которые подписаны на этот район.
+"""
 
 
 async def send_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Отправляет приветственное сообщение и инструкции по использованию бота
-    """
-    welcome_text = (
-        "Добро пожаловать в Бот-Фильтр заявок АСУМО!\n"
-        "Я помогу вам отслеживать заявки по своим районам.\n\n"
-        "Доступные команды:\n"
-        "/request_activation - запросить активацию аккаунта\n"
-        "/add_district <название> - подписаться на район\n"
-        "/remove_district <название> - отписаться от района\n"
-        "/my_districts - показать ваши районы\n"
-        "/help - показать это сообщение\n\n"
-        "Добавьте меня в групповой чат. Когда там появляется заявка, я определю район из текста сообщения "
-        "и перешлю её всем пользователям, которые подписаны на этот район."
-    )
-    await update.message.reply_text(welcome_text)
+    await update.message.reply_text(WELCOME_TEXT)
 
 
 async def request_activation(update: Update, context: ContextTypes.DEFAULT_TYPE):
