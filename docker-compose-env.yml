@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: gupsppmbot
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - "../gupsppmbot_db:/var/lib/postgresql/data"
+    ports:
+      - "5432:5432"
