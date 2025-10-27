@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from urllib.parse import urljoin
 
@@ -21,8 +22,13 @@ async def lifespan(app: FastAPI):
 
     await bot_app.initialize()
     await register_handlers(bot_app)
-    logger.info(f"Starting bot on {settings.HOST}")
-    webhook_url = urljoin(settings.HOST, "tg-webhook")
+    
+    # Определяем хост для webhook
+    host = settings.WEBHOOK_HOST or f"http://localhost:{settings.PORT}"
+    logger.info(f"Starting bot on {host}")
+    
+    # Устанавливаем webhook
+    webhook_url = urljoin(host, "tg-webhook")
     await bot_app.bot.set_webhook(url=webhook_url)
     logger.info("Bot started successfully")
     
@@ -41,3 +47,8 @@ async def telegram_webhook(request: Request):
     update = Update.de_json(update_data, bot_app.bot)
     await bot_app.process_update(update)
     return {"ok": True}
+
+
+@app.get("/")
+async def root():
+    return {"message": "GUP SPPM Bot is running"}

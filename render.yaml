@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: gupsppmbot
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: WEBHOOK_HOST
+        sync: false
+      - key: WEB_SERVER_HOST
+        value: 0.0.0.0
+      - key: WEB_SERVER_PORT
+        value: 8000

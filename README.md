@@ -32,3 +32,38 @@
 - `TELEGRAM_BOT_TOKEN` - токен Telegram бота
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` - параметры подключения к базе данных
 - `ADMIN_IDS` - список Telegram ID администраторов (через запятую)
+- `WEBHOOK_HOST` - адрес webhook'а (обязателен для работы в режиме webhook)
+- `WEB_SERVER_HOST` - хост сервера (по умолчанию 0.0.0.0)
+- `WEB_SERVER_PORT` - порт сервера (по умолчанию 8000)
+
+## Деплой на Render
+
+Для деплоя на Render выполните следующие шаги:
+
+1. Создайте аккаунт на [Render](https://render.com/)
+2. Создайте новую Web Service
+3. Подключите репозиторий с этим проектом
+4. Укажите следующие настройки:
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+5. Добавьте необходимые переменные окружения:
+   - `TELEGRAM_BOT_TOKEN` - токен вашего Telegram бота
+   - `DATABASE_URL` - URL базы данных (Render предоставляет его автоматически при подключении БД)
+   - `ADMIN_IDS` - список ID администраторов в формате JSON массива, например: `["123456789", "987654321"]`
+   - `WEBHOOK_HOST` - URL вашего приложения на Render, например: `https://your-app.onrender.com`
+6. Нажмите "Create Web Service"
+
+## Локальный запуск
+
+Для локального запуска используйте Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+Или запустите напрямую:
+
+```bash
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
